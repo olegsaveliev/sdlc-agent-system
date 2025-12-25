@@ -46,11 +46,3 @@ jobs:
           FEATURE_TITLE: ${{ github.event.client_payload.feature_title || github.event.inputs.jira_feature_key }}
         run: |
           python agents/ba_agent.py
-      
-      - name: Upload user stories artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: user-stories
-          path: user_stories.json
-      
-     
