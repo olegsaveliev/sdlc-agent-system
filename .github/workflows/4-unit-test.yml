@@ -1,4 +1,4 @@
-name: "Step 4: Unit Tests on Commit"
+name: "Step 3: Unit Tests on Commit"
 
 on:
   push:
