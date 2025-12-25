@@ -130,18 +130,18 @@ Return a JSON array of user stories in this format:
 Return ONLY valid JSON, no other text."""
 
     @staticmethod
-def sprint_planning(feature_title: str, user_stories: list, team_size: int = 5) -> str:
-    """Generate sprint planning document"""
-    
-    # Handle both string keys and dict objects
-    if user_stories and isinstance(user_stories[0], str):
-        # If we got Jira keys as strings
-        stories_text = "\n".join([f"- {story}" for story in user_stories])
-    else:
-        # If we got story objects with titles
-        stories_text = "\n".join([f"- {s.get('title', s)}" for s in user_stories])
-    
-    return f"""You are an experienced Scrum Master. Create a Sprint Planning document.
+    def sprint_planning(feature_title: str, user_stories: list, team_size: int = 5) -> str:
+        """Generate sprint planning document"""
+        
+        # Handle both string keys and dict objects
+        if user_stories and isinstance(user_stories[0], str):
+            # If we got Jira keys as strings
+            stories_text = "\n".join([f"- {story}" for story in user_stories])
+        else:
+            # If we got story objects with titles
+            stories_text = "\n".join([f"- {s.get('title', s)}" for s in user_stories])
+        
+        return f"""You are an experienced Scrum Master. Create a Sprint Planning document.
 
 **Feature:** {feature_title}
 
