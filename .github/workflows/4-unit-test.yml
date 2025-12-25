@@ -29,7 +29,7 @@ jobs:
       - name: Run Unit Test Agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_UNIT_NOTIF }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_QA_NOTIF }}
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
