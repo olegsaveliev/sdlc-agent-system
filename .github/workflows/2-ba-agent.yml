@@ -42,7 +42,7 @@ jobs:
           JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
           CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
           CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_JIRA_WEBHOOK_URL }}
           FEATURE_TITLE: ${{ github.event.client_payload.feature_title || github.event.inputs.jira_feature_key }}
         run: |
           python agents/ba_agent.py
@@ -53,3 +53,9 @@ jobs:
           name: user-stories
           path: user_stories.json
       
+      - name: Trigger PM Sprint Planning
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          event-type: pm-sprint-trigger
+          client-payload: '{"issue_number": "${{ github.event.client_payload.issue_number || github.event.inputs.issue_number }}"}'
