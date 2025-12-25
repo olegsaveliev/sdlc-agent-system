@@ -1,11 +1,10 @@
 """
-Jira API Helper
-Simplified wrapper for Jira Cloud REST API operations
+Jira API Helper - Simplified version without Epic requirements
 """
 
 import os
 import requests
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import base64
 
 
@@ -19,7 +18,6 @@ class JiraHelper:
         if not all([self.url, self.email, self.api_token, self.project_key]):
             raise ValueError("Missing Jira credentials in environment variables")
         
-        # Create auth header
         auth_str = f"{self.email}:{self.api_token}"
         auth_bytes = auth_str.encode('ascii')
         auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
@@ -31,13 +29,12 @@ class JiraHelper:
         }
     
     def create_feature(self, title: str, description: str, github_issue_number: int) -> Dict:
-        """Create a Feature (Epic) in Jira"""
+        """Create a Feature Story in Jira (not Epic)"""
         
-        # Basic data structure
         data = {
             "fields": {
                 "project": {"key": self.project_key},
-                "summary": title,
+                "summary": f"[Feature] {title}",
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -56,38 +53,11 @@ class JiraHelper:
                         }
                     ]
                 },
-                "issuetype": {"name": "Epic"}
+                "issuetype": {"name": "Story"},
+                "labels": ["feature", f"github-{github_issue_number}"]
             }
         }
         
-        # Try to find and set Epic Name field (optional)
-        try:
-            # Get create meta to find Epic Name field
-            meta_response = requests.get(
-                f"{self.url}/rest/api/3/issue/createmeta",
-                headers=self.headers,
-                params={
-                    "projectKeys": self.project_key,
-                    "issuetypeNames": "Epic",
-                    "expand": "projects.issuetypes.fields"
-                },
-                timeout=10
-            )
-            
-            if meta_response.status_code == 200:
-                meta = meta_response.json()
-                # Find Epic Name field
-                for project in meta.get('projects', []):
-                    for issuetype in project.get('issuetypes', []):
-                        for field_key, field_info in issuetype.get('fields', {}).items():
-                            if field_info.get('name') == 'Epic Name':
-                                data['fields'][field_key] = f"FEAT-{github_issue_number}"
-                                print(f"📝 Found Epic Name field: {field_key}")
-                                break
-        except Exception as e:
-            print(f"⚠️ Could not set Epic Name field: {e}")
-        
-        # Create the Epic
         response = requests.post(
             f"{self.url}/rest/api/3/issue",
             headers=self.headers,
@@ -104,8 +74,8 @@ class JiraHelper:
             print(f"Response: {response.text}")
             raise Exception(f"Jira API error: {response.status_code}")
     
-    def create_user_story(self, title: str, description: str, epic_key: str) -> Dict:
-        """Create a User Story linked to an Epic"""
+    def create_user_story(self, title: str, description: str, parent_key: str) -> Dict:
+        """Create a User Story linked to feature"""
         
         data = {
             "fields": {
@@ -124,7 +94,7 @@ class JiraHelper:
                     ]
                 },
                 "issuetype": {"name": "Story"},
-                "parent": {"key": epic_key}  # Link to Epic
+                "labels": [f"parent-{parent_key}"]
             }
         }
         
@@ -138,13 +108,30 @@ class JiraHelper:
         if response.status_code == 201:
             result = response.json()
             print(f"✅ Created User Story: {result['key']}")
+            
+            # Link to parent story
+            try:
+                link_data = {
+                    "type": {"name": "Relates"},
+                    "inwardIssue": {"key": result['key']},
+                    "outwardIssue": {"key": parent_key}
+                }
+                requests.post(
+                    f"{self.url}/rest/api/3/issueLink",
+                    headers=self.headers,
+                    json=link_data,
+                    timeout=10
+                )
+            except:
+                pass
+            
             return result
         else:
             print(f"❌ Failed to create User Story: {response.status_code}")
             raise Exception(f"Jira API error: {response.status_code}")
     
     def add_comment(self, issue_key: str, comment: str) -> None:
-        """Add a comment to a Jira issue"""
+        """Add comment to Jira issue"""
         
         data = {
             "body": {
@@ -174,9 +161,8 @@ class JiraHelper:
             print(f"⚠️ Failed to add comment: {response.status_code}")
     
     def transition_issue(self, issue_key: str, status: str) -> None:
-        """Transition issue to a new status"""
+        """Transition issue to new status"""
         
-        # Get available transitions
         response = requests.get(
             f"{self.url}/rest/api/3/issue/{issue_key}/transitions",
             headers=self.headers,
@@ -184,36 +170,23 @@ class JiraHelper:
         )
         
         if response.status_code != 200:
-            print(f"⚠️ Failed to get transitions: {response.status_code}")
             return
         
         transitions = response.json().get('transitions', [])
-        
-        # Find matching transition
         transition_id = None
         for t in transitions:
             if t['name'].lower() == status.lower():
                 transition_id = t['id']
                 break
         
-        if not transition_id:
-            print(f"⚠️ Status '{status}' not found in available transitions")
-            return
-        
-        # Perform transition
-        data = {"transition": {"id": transition_id}}
-        
-        response = requests.post(
-            f"{self.url}/rest/api/3/issue/{issue_key}/transitions",
-            headers=self.headers,
-            json=data,
-            timeout=30
-        )
-        
-        if response.status_code == 204:
-            print(f"✅ Transitioned {issue_key} to {status}")
-        else:
-            print(f"⚠️ Failed to transition: {response.status_code}")
+        if transition_id:
+            data = {"transition": {"id": transition_id}}
+            requests.post(
+                f"{self.url}/rest/api/3/issue/{issue_key}/transitions",
+                headers=self.headers,
+                json=data,
+                timeout=30
+            )
     
     def get_issue(self, issue_key: str) -> Optional[Dict]:
         """Get issue details"""
@@ -226,6 +199,4 @@ class JiraHelper:
         
         if response.status_code == 200:
             return response.json()
-        else:
-            print(f"⚠️ Failed to get issue: {response.status_code}")
-            return None
+        return None
