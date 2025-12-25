@@ -102,7 +102,7 @@ jobs:
         if: steps.create_feature.outputs.feature_key
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.GITHUB_PAT }}
+          token: ${{ secrets.PAT_TOKEN }}
           event-type: ba-agent-trigger
           client-payload: '{"issue_number": "${{ steps.get_issue.outputs.issue_number }}", "jira_feature_key": "${{ steps.create_feature.outputs.feature_key }}"}'
 
