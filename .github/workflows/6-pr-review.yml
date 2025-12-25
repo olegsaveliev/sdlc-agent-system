@@ -1,4 +1,4 @@
-name: "Step 6: PR Review Agent"
+name: "Step 5: PR Review Agent"
 
 on:
   pull_request:
