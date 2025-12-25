@@ -53,9 +53,4 @@ jobs:
           name: user-stories
           path: user_stories.json
       
-      - name: Trigger PM Sprint Planning
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          event-type: pm-sprint-trigger
-          client-payload: '{"issue_number": "${{ github.event.client_payload.issue_number || github.event.inputs.issue_number }}"}'
+     
