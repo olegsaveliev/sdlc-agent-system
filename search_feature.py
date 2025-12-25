@@ -28,10 +28,16 @@ def filter_by_price(products, min_price, max_price):
     filtered = []
     for p in products:
         price = p.get('price', 0)
+        
+        # Handle invalid price types
+        try:
+            price = float(price)
+        except (ValueError, TypeError):
+            continue  # Skip products with invalid prices
+        
         if min_price and price < min_price:
             continue
         if max_price and price > max_price:
             continue
         filtered.append(p)
     return filtered
-# Added comment
