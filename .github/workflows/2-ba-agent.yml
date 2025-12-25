@@ -32,7 +32,7 @@ jobs:
       - name: Run BA Agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.client_payload.issue_number || github.event.inputs.issue_number }}
           JIRA_FEATURE_KEY: ${{ github.event.client_payload.jira_feature_key || github.event.inputs.jira_feature_key }}
