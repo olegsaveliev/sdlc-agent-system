@@ -86,17 +86,14 @@ jobs:
               f.write(f"feature_url={jira.url}/browse/{feature['key']}\n")
           
           # Comment on GitHub issue
-          comment = f"""## 🎯 Jira Feature Created
-
-**Feature:** [{feature['key']}]({jira.url}/browse/{feature['key']})
-
-Next: BA Agent will analyze requirements and create user stories.
-"""
+          comment_text = "## 🎯 Jira Feature Created\n\n"
+          comment_text += f"Feature: [{feature['key']}]({jira.url}/browse/{feature['key']})\n\n"
+          comment_text += "Next: BA Agent will analyze requirements and create user stories.\n"
           
           requests.post(
               f"https://api.github.com/repos/{repo}/issues/{issue_num}/comments",
               headers=headers,
-              json={"body": comment}
+              json={"body": comment_text}
           )
           
           PYTHON_SCRIPT
@@ -108,3 +105,4 @@ Next: BA Agent will analyze requirements and create user stories.
           token: ${{ secrets.GITHUB_PAT }}
           event-type: ba-agent-trigger
           client-payload: '{"issue_number": "${{ steps.get_issue.outputs.issue_number }}", "jira_feature_key": "${{ steps.create_feature.outputs.feature_key }}"}'
+
