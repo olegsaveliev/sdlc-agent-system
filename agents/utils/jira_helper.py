@@ -101,6 +101,75 @@ class JiraHelper:
             print(f"❌ Failed to create User Story: {response.status_code}")
             raise Exception(f"Jira API error: {response.status_code}")
     
+    def update_issue_description(self, issue_key: str, description: str) -> bool:
+        """Update issue description with BA analysis"""
+        
+        # Convert plain text to Jira ADF format
+        # Split by double newlines for paragraphs
+        paragraphs = description.split('\n\n')
+        
+        content = []
+        for para in paragraphs:
+            if para.strip():
+                # Check if it's a heading (starts with #)
+                if para.strip().startswith('#'):
+                    # Extract heading level and text
+                    heading_text = para.strip().lstrip('#').strip()
+                    heading_level = min(len(para.strip()) - len(para.strip().lstrip('#')), 6)
+                    
+                    content.append({
+                        "type": "heading",
+                        "attrs": {"level": heading_level},
+                        "content": [
+                            {"type": "text", "text": heading_text}
+                        ]
+                    })
+                else:
+                    # Regular paragraph
+                    content.append({
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": para.strip()}
+                        ]
+                    })
+        
+        data = {
+            "fields": {
+                "description": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": content if content else [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": description}
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+        
+        try:
+            response = requests.put(
+                f"{self.url}/rest/api/3/issue/{issue_key}",
+                headers=self.headers,
+                json=data,
+                timeout=30
+            )
+            
+            if response.status_code == 204:
+                print(f"✅ Updated Jira issue description: {issue_key}")
+                return True
+            else:
+                print(f"⚠️ Failed to update Jira description: {response.status_code}")
+                print(f"   Response: {response.text[:200]}")
+                return False
+        
+        except Exception as e:
+            print(f"⚠️ Error updating Jira description: {e}")
+            return False
+    
     def add_comment(self, issue_key: str, comment: str) -> None:
         """Add comment to issue"""
         
