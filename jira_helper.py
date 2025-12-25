@@ -1,12 +1,7 @@
-"""
-Jira API Helper - Simple Story-based version
-"""
-
 import os
 import requests
 from typing import Dict, Optional
 import base64
-
 
 class JiraHelper:
     def __init__(self):
@@ -19,8 +14,7 @@ class JiraHelper:
             raise ValueError("Missing Jira credentials in environment variables")
         
         auth_str = f"{self.email}:{self.api_token}"
-        auth_bytes = auth_str.encode('ascii')
-        auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+        auth_b64 = base64.b64encode(auth_str.encode('ascii')).decode('ascii')
         
         self.headers = {
             "Authorization": f"Basic {auth_b64}",
@@ -29,8 +23,6 @@ class JiraHelper:
         }
     
     def create_feature(self, title: str, description: str, github_issue_number: int) -> Dict:
-        """Create a Feature Story in Jira (NOT Epic - no custom fields)"""
-        
         data = {
             "fields": {
                 "project": {"key": self.project_key},
@@ -38,112 +30,46 @@ class JiraHelper:
                 "description": {
                     "type": "doc",
                     "version": 1,
-                    "content": [
-                        {
-                            "type": "paragraph",
-                            "content": [
-                                {"type": "text", "text": description or "Created from GitHub"}
-                            ]
-                        }
-                    ]
+                    "content": [{
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": description or "Created from GitHub"}]
+                    }]
                 },
                 "issuetype": {"name": "Story"}
             }
         }
         
-        response = requests.post(
-            f"{self.url}/rest/api/3/issue",
-            headers=self.headers,
-            json=data,
-            timeout=30
-        )
+        response = requests.post(f"{self.url}/rest/api/3/issue", headers=self.headers, json=data, timeout=30)
         
         if response.status_code == 201:
             result = response.json()
             print(f"✅ Created Jira Feature: {result['key']}")
             return result
         else:
-            print(f"❌ Failed to create Jira Feature: {response.status_code}")
-            print(f"Response: {response.text}")
+            print(f"❌ Failed: {response.status_code} - {response.text}")
             raise Exception(f"Jira API error: {response.status_code}")
     
     def create_user_story(self, title: str, description: str, parent_key: str) -> Dict:
-        """Create a User Story"""
-        
         data = {
             "fields": {
                 "project": {"key": self.project_key},
                 "summary": title,
-                "description": {
-                    "type": "doc",
-                    "version": 1,
-                    "content": [
-                        {
-                            "type": "paragraph",
-                            "content": [
-                                {"type": "text", "text": description}
-                            ]
-                        }
-                    ]
-                },
+                "description": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}]},
                 "issuetype": {"name": "Story"}
             }
         }
-        
-        response = requests.post(
-            f"{self.url}/rest/api/3/issue",
-            headers=self.headers,
-            json=data,
-            timeout=30
-        )
-        
+        response = requests.post(f"{self.url}/rest/api/3/issue", headers=self.headers, json=data, timeout=30)
         if response.status_code == 201:
-            result = response.json()
-            print(f"✅ Created User Story: {result['key']}")
-            return result
-        else:
-            print(f"❌ Failed to create User Story: {response.status_code}")
-            raise Exception(f"Jira API error: {response.status_code}")
+            return response.json()
+        raise Exception(f"Jira API error: {response.status_code}")
     
     def add_comment(self, issue_key: str, comment: str) -> None:
-        """Add comment to Jira issue"""
-        
-        data = {
-            "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {"type": "text", "text": comment}
-                        ]
-                    }
-                ]
-            }
-        }
-        
-        response = requests.post(
-            f"{self.url}/rest/api/3/issue/{issue_key}/comment",
-            headers=self.headers,
-            json=data,
-            timeout=30
-        )
-        
-        if response.status_code == 201:
-            print(f"✅ Added comment to {issue_key}")
+        data = {"body": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": comment}]}]}}
+        requests.post(f"{self.url}/rest/api/3/issue/{issue_key}/comment", headers=self.headers, json=data, timeout=30)
     
     def transition_issue(self, issue_key: str, status: str) -> None:
-        """Transition issue to new status"""
         pass
     
     def get_issue(self, issue_key: str) -> Optional[Dict]:
-        """Get issue details"""
-        
-        response = requests.get(
-            f"{self.url}/rest/api/3/issue/{issue_key}",
-            headers=self.headers,
-            timeout=30
-        )
-        
+        response = requests.get(f"{self.url}/rest/api/3/issue/{issue_key}", headers=self.headers, timeout=30)
         return response.json() if response.status_code == 200 else None
