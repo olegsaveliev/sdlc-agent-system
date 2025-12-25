@@ -1,7 +1,12 @@
+"""
+Jira API Helper - Simple Story-based version
+"""
+
 import os
 import requests
 from typing import Dict, Optional
 import base64
+
 
 class JiraHelper:
     def __init__(self):
@@ -24,7 +29,7 @@ class JiraHelper:
         }
     
     def create_feature(self, title: str, description: str, github_issue_number: int) -> Dict:
-        """Create a Feature Story in Jira"""
+        """Create a Feature Story in Jira (NOT Epic - no custom fields)"""
         
         data = {
             "fields": {
@@ -42,8 +47,7 @@ class JiraHelper:
                         }
                     ]
                 },
-                "issuetype": {"name": "Story"},
-                "labels": ["feature"]
+                "issuetype": {"name": "Story"}
             }
         }
         
@@ -102,7 +106,7 @@ class JiraHelper:
             raise Exception(f"Jira API error: {response.status_code}")
     
     def add_comment(self, issue_key: str, comment: str) -> None:
-        """Add comment to issue"""
+        """Add comment to Jira issue"""
         
         data = {
             "body": {
@@ -119,15 +123,18 @@ class JiraHelper:
             }
         }
         
-        requests.post(
+        response = requests.post(
             f"{self.url}/rest/api/3/issue/{issue_key}/comment",
             headers=self.headers,
             json=data,
             timeout=30
         )
+        
+        if response.status_code == 201:
+            print(f"✅ Added comment to {issue_key}")
     
     def transition_issue(self, issue_key: str, status: str) -> None:
-        """Transition issue"""
+        """Transition issue to new status"""
         pass
     
     def get_issue(self, issue_key: str) -> Optional[Dict]:
