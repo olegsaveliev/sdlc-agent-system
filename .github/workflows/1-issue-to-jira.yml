@@ -1,0 +1,110 @@
+name: "Step 1: Issue → Jira Feature"
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number'
+        required: true
+
+jobs:
+  create-jira-feature:
+    runs-on: ubuntu-latest
+    outputs:
+      jira_feature_key: ${{ steps.create_feature.outputs.feature_key }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests anthropic atlassian-python-api python-dotenv
+      
+      - name: Get issue number
+        id: get_issue
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "issue_number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Jira Feature
+        id: create_feature
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python << 'PYTHON_SCRIPT'
+          import os
+          import sys
+          sys.path.insert(0, 'agents')
+          
+          from utils import JiraHelper
+          import requests
+          
+          # Get issue details
+          issue_num = os.environ.get('issue_number', '${{ steps.get_issue.outputs.issue_number }}')
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GITHUB_TOKEN']
+          
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json"
+          }
+          
+          response = requests.get(
+              f"https://api.github.com/repos/{repo}/issues/{issue_num}",
+              headers=headers
+          )
+          
+          issue = response.json()
+          title = issue['title']
+          description = issue.get('body', '')
+          
+          # Create Jira feature
+          jira = JiraHelper()
+          feature = jira.create_feature(title, description, int(issue_num))
+          
+          print(f"✅ Created Jira Feature: {feature['key']}")
+          
+          # Save for next steps
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"feature_key={feature['key']}\n")
+              f.write(f"feature_url={jira.url}/browse/{feature['key']}\n")
+          
+          # Comment on GitHub issue
+          comment = f"""## 🎯 Jira Feature Created
+
+**Feature:** [{feature['key']}]({jira.url}/browse/{feature['key']})
+
+Next: BA Agent will analyze requirements and create user stories.
+"""
+          
+          requests.post(
+              f"https://api.github.com/repos/{repo}/issues/{issue_num}/comments",
+              headers=headers,
+              json={"body": comment}
+          )
+          
+          PYTHON_SCRIPT
+      
+      - name: Trigger BA Agent
+        if: steps.create_feature.outputs.feature_key
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_PAT }}
+          event-type: ba-agent-trigger
+          client-payload: '{"issue_number": "${{ steps.get_issue.outputs.issue_number }}", "jira_feature_key": "${{ steps.create_feature.outputs.feature_key }}"}'

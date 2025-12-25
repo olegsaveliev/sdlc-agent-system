@@ -1,0 +1,61 @@
+name: "Step 2: BA Agent - Requirements Analysis"
+
+on:
+  repository_dispatch:
+    types: [ba-agent-trigger]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number'
+        required: true
+      jira_feature_key:
+        description: 'Jira Feature key'
+        required: true
+
+jobs:
+  ba-analysis:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run BA Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.client_payload.issue_number || github.event.inputs.issue_number }}
+          JIRA_FEATURE_KEY: ${{ github.event.client_payload.jira_feature_key || github.event.inputs.jira_feature_key }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          FEATURE_TITLE: ${{ github.event.client_payload.feature_title || github.event.inputs.jira_feature_key }}
+        run: |
+          python agents/ba_agent.py
+      
+      - name: Upload user stories artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: user-stories
+          path: user_stories.json
+      
+      - name: Trigger PM Sprint Planning
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_PAT }}
+          event-type: pm-sprint-trigger
+          client-payload: '{"issue_number": "${{ github.event.client_payload.issue_number || github.event.inputs.issue_number }}"}'

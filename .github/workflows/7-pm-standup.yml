@@ -1,0 +1,49 @@
+name: "Step 7: PM Daily Standup"
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+  schedule:
+    - cron: '0 9 * * 1-5'  # 9 AM weekdays
+  workflow_dispatch:
+
+jobs:
+  daily-standup:
+    if: github.event.pull_request.merged == true || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Download sprint planning
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: 3-pm-sprint.yml
+          name: sprint-planning
+          path: .
+        continue-on-error: true
+      
+      - name: Run PM Standup Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python agents/pm_standup_agent.py
