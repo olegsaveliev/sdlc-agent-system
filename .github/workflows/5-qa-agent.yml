@@ -1,4 +1,4 @@
-name: "Step 5: QA Agent - Automation Tests"
+name: "Step 4: QA Agent - Automation Tests"
 
 on:
   pull_request:
