@@ -34,3 +34,4 @@ def filter_by_price(products, min_price, max_price):
             continue
         filtered.append(p)
     return filtered
+# Added comment
