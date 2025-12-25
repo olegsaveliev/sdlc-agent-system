@@ -1,4 +1,4 @@
-name: "Step 3: Unit Tests on Commit"
+name: "Step 4: Unit Tests on Commit"
 
 on:
   push:
@@ -30,6 +30,9 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_UNIT_NOTIF }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           python agents/unit_test_agent.py
         continue-on-error: true

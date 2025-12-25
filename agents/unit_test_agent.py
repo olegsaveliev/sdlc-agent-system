@@ -50,6 +50,61 @@ def get_file_diff(filepath):
         return ""
 
 
+def get_latest_commit_sha():
+    """Get the SHA of the latest commit"""
+    
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except:
+        return os.environ.get('GITHUB_SHA', '')
+
+
+def post_commit_comment(commit_sha: str, comment: str):
+    """Post a comment on a GitHub commit"""
+    
+    repo = os.environ.get('GITHUB_REPOSITORY')
+    token = os.environ.get('GITHUB_TOKEN')
+    
+    if not repo or not token or not commit_sha:
+        print("⚠️ Missing GitHub credentials for commit comment")
+        return False
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
+    
+    print(f"\n💬 Posting comment to commit {commit_sha[:7]}...")
+    
+    try:
+        response = requests.post(
+            f"https://api.github.com/repos/{repo}/commits/{commit_sha}/comments",
+            headers=headers,
+            json={"body": comment},
+            timeout=30
+        )
+        
+        if response.status_code == 201:
+            print("✅ GitHub commit comment posted successfully")
+            comment_data = response.json()
+            print(f"   Comment URL: {comment_data.get('html_url', 'N/A')}")
+            return True
+        else:
+            print(f"❌ Failed to post commit comment: {response.status_code}")
+            print(f"   Response: {response.text[:200]}")
+            return False
+    
+    except Exception as e:
+        print(f"❌ Error posting commit comment: {e}")
+        return False
+
+
 def run_tests(test_file):
     """Run pytest on generated tests"""
     
@@ -87,12 +142,23 @@ def main():
         slack = SlackHelper()
         claude = ClaudeHelper()
         
+        # Get commit SHA for commenting
+        commit_sha = get_latest_commit_sha()
+        
         # Get changed files
         print("\n📂 Detecting changed files...")
         changed_files = get_latest_commit_changes()
         
         if not changed_files:
             print("ℹ️ No Python files changed in this commit")
+            
+            # Still post a comment to GitHub
+            if commit_sha:
+                post_commit_comment(
+                    commit_sha,
+                    "## 🧪 Unit Test Agent\n\nℹ️ No Python files changed in this commit. No tests generated."
+                )
+            
             return
         
         print(f"✅ Found {len(changed_files)} Python file(s)")
@@ -101,6 +167,7 @@ def main():
         
         # Generate tests for each file
         all_tests = []
+        files_tested = []
         
         for filepath in changed_files[:3]:  # Limit to 3 files
             print(f"\n🧪 Generating tests for {filepath}...")
@@ -124,10 +191,19 @@ def main():
                 test_code = test_code.split('```')[1].split('```')[0].strip()
             
             all_tests.append(test_code)
+            files_tested.append(filepath)
             print(f"  ✅ Generated {len(test_code)} chars of test code")
         
         if not all_tests:
             print("\nℹ️ No tests generated")
+            
+            # Post to GitHub
+            if commit_sha:
+                post_commit_comment(
+                    commit_sha,
+                    f"## 🧪 Unit Test Agent\n\n⚠️ No tests could be generated for the changed files.\n\n**Files checked:** {len(changed_files)}"
+                )
+            
             return
         
         # Combine all tests
@@ -154,15 +230,55 @@ def main():
         print(results['output'])
         print("-" * 60)
         
-        # Send Slack notification
-        if results['passed']:
+        # Determine status
+        if results['passed'] and not results['failed']:
             status_emoji = "✅"
-            status_text = "Tests Passed"
-        else:
+            status_text = "All Tests Passed"
+            status_color = "success"
+        elif results['failed']:
             status_emoji = "❌"
-            status_text = "Tests Failed"
+            status_text = "Some Tests Failed"
+            status_color = "failure"
+        else:
+            status_emoji = "⚠️"
+            status_text = "Tests Completed"
+            status_color = "warning"
         
-        print(f"\n📱 Sending Slack notification...")
+        # Post to GitHub commit
+        if commit_sha:
+            print("\n💬 Posting results to GitHub commit...")
+            
+            github_comment = f"""## 🧪 Unit Test Agent - {status_emoji} {status_text}
+
+**Files Tested:** {len(files_tested)}
+{chr(10).join([f'- `{f}`' for f in files_tested])}
+
+**Status:** {status_emoji} {status_text}
+
+**Test Results:**
+```
+{results['output'][:1500]}
+```
+
+<details>
+<summary>📊 Test Details</summary>
+
+**Exit Code:** {results['exit_code']}
+**Tests Passed:** {'Yes' if results['passed'] else 'No'}
+**Tests Failed:** {'Yes' if results['failed'] else 'No'}
+
+</details>
+
+---
+*Generated by Unit Test Agent | Cost: ${claude.get_cost()}*"""
+            
+            github_success = post_commit_comment(commit_sha, github_comment)
+            
+            if not github_success:
+                print("⚠️ GitHub comment failed but continuing...")
+        
+        # Send Slack notification
+        print("\n📱 Sending Slack notification...")
         slack.send_message(
             f"{status_emoji} Unit Tests {status_text}",
             blocks=[
@@ -178,7 +294,7 @@ def main():
                     "fields": [
                         {
                             "type": "mrkdwn",
-                            "text": f"*Files Tested:*\n{len(changed_files)}"
+                            "text": f"*Files Tested:*\n{len(files_tested)}"
                         },
                         {
                             "type": "mrkdwn",
@@ -200,8 +316,9 @@ def main():
         print("\n" + "=" * 60)
         print(f"{status_emoji} UNIT TEST AGENT COMPLETED")
         print("=" * 60)
-        print(f"📂 Files tested: {len(changed_files)}")
+        print(f"📂 Files tested: {len(files_tested)}")
         print(f"🧪 Status: {status_text}")
+        print(f"💬 GitHub comment: {'✅ Posted' if github_success else '⚠️ Skipped'}")
         print(f"💰 Cost: ${claude.get_cost()}")
         print("=" * 60)
         
