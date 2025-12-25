@@ -46,13 +46,14 @@ jobs:
           JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_JIRA_WEBHOOK_URL }}
         run: |
           python << 'PYTHON_SCRIPT'
           import os
           import sys
           sys.path.insert(0, 'agents')
           
-          from utils import JiraHelper
+          from utils import JiraHelper, SlackHelper
           import requests
           
           # Get issue details
@@ -96,6 +97,21 @@ jobs:
               json={"body": comment_text}
           )
           
+          # Send Slack notification
+          print("\n📱 Sending Slack notification...")
+          slack = SlackHelper()
+          if slack.enabled:
+              jira_url = f"{jira.url}/browse/{feature['key']}"
+              slack.notify_feature_created(
+                  issue_number=int(issue_num),
+                  title=title,
+                  jira_key=feature['key'],
+                  jira_url=jira_url
+              )
+              print("✅ Slack notification sent")
+          else:
+              print("⚠️ Slack webhook not configured - skipping notification")
+          
           PYTHON_SCRIPT
       
       - name: Trigger BA Agent
@@ -105,4 +121,3 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           event-type: ba-agent-trigger
           client-payload: '{"issue_number": "${{ steps.get_issue.outputs.issue_number }}", "jira_feature_key": "${{ steps.create_feature.outputs.feature_key }}"}'
-
