@@ -27,14 +27,6 @@ jobs:
         run: |
           pip install -r requirements.txt
       
-      - name: Download sprint planning
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: 3-pm-sprint.yml
-          name: sprint-planning
-          path: .
-        continue-on-error: true
-      
       - name: Run PM Standup Agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
