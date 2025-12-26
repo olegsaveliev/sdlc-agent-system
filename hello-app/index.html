@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .app-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .app-version {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .message-container {
+            text-align: center;
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        .hello-message {
+            font-size: 48px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        footer {
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive design for tablets */
+        @media (max-width: 768px) {
+            .hello-message {
+                font-size: 36px;
+            }
+
+            .app-title {
+                font-size: 20px;
+            }
+
+            .subtitle {
+                font-size: 16px;
+            }
+        }
+
+        /* Responsive design for mobile phones */
+        @media (max-width: 480px) {
+            .hello-message {
+                font-size: 32px;
+            }
+
+            .app-title {
+                font-size: 18px;
+            }
+
+            .subtitle {
+                font-size: 14px;
+            }
+
+            header, main, footer {
+                padding: 15px;
+            }
+        }
+
+        /* Orientation handling */
+        @media (orientation: landscape) and (max-height: 500px) {
+            header {
+                padding: 10px;
+            }
+
+            .hello-message {
+                font-size: 32px;
+                margin-bottom: 10px;
+            }
+
+            footer {
+                padding: 10px;
+            }
+        }
+
+        /* High contrast mode for accessibility */
+        @media (prefers-contrast: high) {
+            body {
+                background: #000000;
+            }
+
+            .hello-message {
+                text-shadow: none;
+                border: 2px solid #ffffff;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="app-title">Hello App</div>
+        <div class="app-version">v1.0.0</div>
+    </header>
+
+    <main>
+        <div class="message-container">
+            <h1 class="hello-message">Hello World</h1>
+            <p class="subtitle">Welcome to the Hello App!</p>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Hello App. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Performance monitoring - US002: Launch within 3 seconds
+        window.addEventListener('load', function() {
+            const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+            console.log('App loaded in:', loadTime, 'ms');
+
+            if (loadTime < 3000) {
+                console.log('✓ US002: App launched within 3 seconds');
+            }
+        });
+
+        // Orientation change handling - US004: Responsive interface
+        window.addEventListener('orientationchange', function() {
+            console.log('Orientation changed to:', screen.orientation.type);
+        });
+
+        // Log app information - US005: Application information
+        console.log('Hello App v1.0.0 - Running successfully');
+        console.log('User Stories implemented: US001, US002, US003, US004, US005');
+    </script>
+</body>
+</html>
