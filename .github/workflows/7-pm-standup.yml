@@ -5,8 +5,8 @@ on:
     types: [closed]
     branches:
       - main
-  schedule:
-    - cron: '0 9 * * 1-5'  # 9 AM weekdays
+  #schedule:
+   # - cron: '0 9 * * 1-5'  # 9 AM weekdays
   workflow_dispatch:
 
 jobs:
